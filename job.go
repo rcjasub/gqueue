@@ -15,17 +15,43 @@ const (
 )
 
 type Job struct {
-	Id        string
-	Name      string
-	Payload   string
-	Status    JobStatus
-	Attempts  int
-	CreatedAt time.Time
+	Id         string
+	Name       string
+	Payload    string
+	Status     JobStatus
+	Attempts   int
+	MaxRetries int
+	CreatedAt  time.Time
 }
 
 func newJob(id string, name string, payload string) Job {
-	job := Job{Id: id, Name: name, Payload: payload, Status: StatusWaiting, CreatedAt: time.Now()}
-	return job
+	return Job{
+		Id:         id,
+		Name:       name,
+		Payload:    payload,
+		Status:     StatusWaiting,
+		MaxRetries: 3,
+		CreatedAt:  time.Now(),
+	}
+}
+
+func (s JobStatus) String() string {
+	switch s {
+	case StatusWaiting:
+		return "waiting"
+
+	case StatusActive:
+		return "active"
+
+	case StatusCompleted:
+		return "completed"
+
+	case StatusFailed:
+		return "failed"
+
+	default:
+		return "unknown"
+	}
 }
 
 func printJob(j Job) {

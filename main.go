@@ -1,15 +1,25 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func main() {
-	fmt.Println("gqueue starting..")
-	fmt.Println("Jasub Rodriguez")
+	job := newJob("1", "send-email", "bad@example.com")
+	job2 := newJob("2", "send-email", "send@example.com")
+	queue := newQueue(10)
+	worker := newWorker(queue, func(job Job) error {
+		fmt.Println("processing:", job.Payload)
 
-	job := newJob("1", "send-email", "user@example.com")
-
-	queue := newQueue(3)
+		if job.Payload == "bad@example.com" {
+			return fmt.Errorf("invalid email")
+		}
+		return nil
+	})
+	worker.Start()
 	queue.Enqueue(job)
-	received := queue.Dequeue()
-	printJob(received)
+	queue.Enqueue(job2)
+	
+	time.Sleep(2 * time.Second)
 }

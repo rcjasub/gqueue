@@ -6,6 +6,6 @@ func main() {
 	fmt.Println("gqueue starting..")
 	fmt.Println("Jasub Rodriguez")
 
-	job := Job{Id: "123", Name: "send-email", Payload: "user@example.com"}
-	printJob(job)
+	job := newJob("ash", "bs", "12")
+	fmt.Println(job)
 }

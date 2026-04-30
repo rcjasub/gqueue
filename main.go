@@ -16,10 +16,10 @@ func main() {
 			return fmt.Errorf("invalid email")
 		}
 		return nil
-	})
+	}, 3)
 	worker.Start()
 	queue.Enqueue(job)
 	queue.Enqueue(job2)
-	
+
 	time.Sleep(2 * time.Second)
 }

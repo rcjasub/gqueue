@@ -21,6 +21,7 @@ type Job struct {
 	Status     JobStatus
 	Attempts   int
 	MaxRetries int
+	Delay      time.Duration
 	CreatedAt  time.Time
 }
 

@@ -8,7 +8,9 @@ import (
 func main() {
 	job := newJob("1", "send-email", "bad@example.com")
 	job2 := newJob("2", "send-email", "send@example.com")
-	queue := newQueue(10)
+	job2.Delay = 2 * time.Second
+	queue := newQueue(10, "email-queue")
+
 	worker := newWorker(queue, func(job Job) error {
 		fmt.Println("processing:", job.Payload)
 
@@ -17,9 +19,18 @@ func main() {
 		}
 		return nil
 	}, 3)
+
+	worker.OnCompleted(func(job Job) {
+		fmt.Println("Job finished!", job.Id)
+	})
+
+	worker.OnFailed(func(job Job) {
+		fmt.Println("Job failed", job.Id)
+	})
+
 	worker.Start()
 	queue.Enqueue(job)
 	queue.Enqueue(job2)
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 }

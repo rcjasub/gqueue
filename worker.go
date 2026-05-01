@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type ProcessFunc func(j Job) error
 type Event func(job Job)
@@ -20,11 +23,14 @@ func newWorker(queue *Queue, process ProcessFunc, concurrency int) *Worker {
 		concurrency: concurrency}
 }
 
-func (w *Worker) Start() {
+func (w *Worker) Start(ctx context.Context) {
 	for i := 0; i < w.concurrency; i++ {
 		go func() {
 			for {
-				job := w.queue.Dequeue()
+				job, ok := w.queue.Dequeue(ctx)
+				if !ok {
+					return
+				}
 				w.processJob(job)
 			}
 		}()

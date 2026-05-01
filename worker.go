@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,7 @@ type Worker struct {
 	concurrency int
 	onCompleted Event
 	onFailed    Event
+	waitGroup   sync.WaitGroup
 }
 
 func newWorker(queue *Queue, process ProcessFunc, concurrency int) *Worker {
@@ -25,7 +27,9 @@ func newWorker(queue *Queue, process ProcessFunc, concurrency int) *Worker {
 
 func (w *Worker) Start(ctx context.Context) {
 	for i := 0; i < w.concurrency; i++ {
+		w.waitGroup.Add(1)
 		go func() {
+			defer w.waitGroup.Done() //defer means "run this when the function returns"
 			for {
 				job, ok := w.queue.Dequeue(ctx)
 				if !ok {

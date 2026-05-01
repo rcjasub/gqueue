@@ -9,13 +9,13 @@ import (
 )
 
 func main() {
-    ctx, cancel := context.WithCancel(context.Background())
-	quit  := make(chan os.Signal, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
 	go func() {
 		<-quit
-        cancel()
+		cancel()
 	}()
 
 	job := newJob("1", "send-email", "bad@example.com")
@@ -45,4 +45,5 @@ func main() {
 	queue.Enqueue(job2)
 
 	<-ctx.Done()
+	worker.waitGroup.Wait()
 }

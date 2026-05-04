@@ -1,25 +1,31 @@
 package main
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"github.com/redis/go-redis/v9"
+)
 
 type Queue struct {
-	jobs chan Job
-	Name string
+	client *redis.Client
+	Name   string
 }
 
-func newQueue(size int, name string) *Queue {
-	return &Queue{Name: name, jobs: make(chan Job, size)}
+func newQueue(name string) *Queue {
+	return &Queue{client: redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	}), Name: name}
 }
 
-func (q *Queue) Enqueue(job Job) {
-	q.jobs <- job
+func (q *Queue) Enqueue(ctx context.Context, job Job) error {
+	jobJSON, err := json.Marshal(job) // converts the struct into a JSON string
+	if err != nil {                   // nil = no error
+		return err
+	}
+
+	return q.client.LPush(ctx, q.Name, jobJSON).Err()
 }
 
 func (q *Queue) Dequeue(ctx context.Context) (Job, bool) {
-	select {
-	case <-ctx.Done():
-		return Job{}, false
-	case job := <-q.jobs:
-		return job, true
-	}
+   //next
 }

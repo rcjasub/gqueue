@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+//fix job 
+
 type ProcessFunc func(j Job) error
 type Event func(job Job)
 
@@ -29,7 +31,7 @@ func (w *Worker) Start(ctx context.Context) {
 	for i := 0; i < w.concurrency; i++ {
 		w.waitGroup.Add(1)
 		go func() {
-			defer w.waitGroup.Done() //defer means "run this when the function returns"
+			defer w.waitGroup.Done() // defer means "run this when the function returns"
 			for {
 				job, ok := w.queue.Dequeue(ctx)
 				if !ok {

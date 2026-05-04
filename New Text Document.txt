@@ -1,0 +1,20 @@
+---                                                                                                                        
+  Project: Building BullMQ in Go as a learning exercise.                                                                     
+                                                                                                                             
+  What's been built:                                                                                                         
+  - Job struct with status, retries, delay, and lifecycle
+  - Queue with enqueue/dequeue using a buffered channel                                                                      
+  - Worker with concurrency — spawns N goroutines that independently pull jobs                                             
+  - Job lifecycle callbacks — OnCompleted, OnFailed
+  - Retry logic — re-enqueues failed jobs up to MaxRetries
+  - Graceful shutdown — context.WithCancel + signal.Notify catches Ctrl+C, cancels context, goroutines stop accepting new
+  jobs, WaitGroup waits for in-flight jobs to finish
+
+  Current state: Fully working in-memory queue with graceful shutdown.
+
+  Next step: Replace in-memory channel with Redis
+  - Queue.jobs is currently a chan Job — needs to become Redis list/stream
+  - Workers pull from Redis instead of a Go channel
+  - Goals: persistence (jobs survive crashes) and scalability (multiple workers share one queue)
+  - Will need the go-redis client library
+

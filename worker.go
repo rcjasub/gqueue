@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-//fix job 
-
 type ProcessFunc func(j Job) error
 type Event func(job Job)
 
@@ -37,13 +35,13 @@ func (w *Worker) Start(ctx context.Context) {
 				if !ok {
 					return
 				}
-				w.processJob(job)
+				w.processJob(ctx, job)
 			}
 		}()
 	}
 }
 
-func (w *Worker) processJob(job Job) {
+func (w *Worker) processJob(ctx context.Context, job Job) {
 
 	if job.Delay > 0 {
 		time.Sleep(job.Delay)
@@ -56,7 +54,7 @@ func (w *Worker) processJob(job Job) {
 		job.Attempts++
 
 		if job.Attempts < job.MaxRetries {
-			w.queue.Enqueue(job)
+			w.queue.Enqueue(ctx, job)
 		} else {
 			job.Status = StatusFailed
 			if w.onFailed != nil {

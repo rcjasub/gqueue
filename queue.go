@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
+	"time"
 )
 
 type Queue struct {
@@ -17,9 +18,12 @@ func newQueue(name string) *Queue {
 	}), Name: name}
 }
 
+
+// The ctx gets passed to Redis operations so that if the context is cancelled
+// (e.g. Ctrl+C), Redis knows to stop too.
 func (q *Queue) Enqueue(ctx context.Context, job Job) error {
-	jobJSON, err := json.Marshal(job) // converts the struct into a JSON string
-	if err != nil {                   // nil = no error
+	jobJSON, err := json.Marshal(job)
+	if err != nil {
 		return err
 	}
 
@@ -27,5 +31,28 @@ func (q *Queue) Enqueue(ctx context.Context, job Job) error {
 }
 
 func (q *Queue) Dequeue(ctx context.Context) (Job, bool) {
-   //next
+
+	for {
+		result, err := q.client.BRPop(ctx, 1*time.Second, q.Name).Result()
+
+		//The select checks if context is cancelled
+		if err == redis.Nil {
+			select {
+			case <-ctx.Done():
+				return Job{}, false
+			default:
+				continue
+			}
+		}
+
+		if err != nil {
+			return Job{}, false
+		}
+
+		var job Job
+		json.Unmarshal([]byte(result[1]), &job)
+
+		return job, true
+	}
+
 }

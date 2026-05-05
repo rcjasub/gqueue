@@ -15,14 +15,18 @@ const (
 )
 
 type Job struct {
-	Id         string
-	Name       string
-	Payload    string
-	Status     JobStatus
-	Attempts   int
-	MaxRetries int
-	Delay      time.Duration
-	CreatedAt  time.Time
+	Id          string
+	Name        string
+	Payload     string
+	Status      JobStatus
+	Attempts    int
+	MaxRetries  int
+	Delay       time.Duration
+	CreatedAt   time.Time
+	StartedAt   time.Time
+	FailedAt    time.Time
+	CompletedAt time.Time
+	Error       string
 }
 
 func newJob(id string, name string, payload string) Job {

@@ -1,0 +1,10 @@
+  - Job states in Redis — BullMQ uses multiple Redis lists/sorted sets to track waiting, active, completed, failed separately. Right now your status only 
+  lives in memory during processing.
+  - Delayed jobs — BullMQ uses a Redis sorted set scored by timestamp so jobs fire at the right time. Your current time.Sleep approach blocks a worker.   
+  - Job progress — workers can report % completion
+  - Priorities — higher priority jobs jump the queue
+  - Rate limiting — max N jobs per second
+  - Repeatable jobs — cron-like scheduling
+  - Stalled job detection — if a worker crashes mid-job, BullMQ reassigns it
+  - Job results storage — completed job data persisted in Redis
+  - Events/pub-sub — real-time job updates via Redis pub/sub

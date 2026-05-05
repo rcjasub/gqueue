@@ -18,7 +18,6 @@ func newQueue(name string) *Queue {
 	}), Name: name}
 }
 
-
 // The ctx gets passed to Redis operations so that if the context is cancelled
 // (e.g. Ctrl+C), Redis knows to stop too.
 func (q *Queue) Enqueue(ctx context.Context, job Job) error {
@@ -27,6 +26,12 @@ func (q *Queue) Enqueue(ctx context.Context, job Job) error {
 		return err
 	}
 
+	q.client.HSet(ctx, "job:"+job.Id,
+		"id", job.Id,
+		"status", job.Status.String(),
+		"payload", job.Payload,
+		"createdAt", job.CreatedAt.Format(time.RFC3339),
+	)
 	return q.client.LPush(ctx, q.Name, jobJSON).Err()
 }
 

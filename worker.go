@@ -50,10 +50,6 @@ func (w *Worker) Start(ctx context.Context) {
 
 func (w *Worker) processJob(ctx context.Context, job Job) {
 
-	if job.Delay > 0 {
-		time.Sleep(job.Delay)
-	}
-
 	job.Status = StatusActive
 	err := w.process(job)
 

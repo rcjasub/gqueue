@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -32,7 +33,40 @@ func (q *Queue) Enqueue(ctx context.Context, job Job) error {
 		"payload", job.Payload,
 		"createdAt", job.CreatedAt.Format(time.RFC3339),
 	)
+	
+	if job.Delay > 0 {
+		return q.client.ZAdd(ctx, "delayed", redis.Z{
+			Score:  float64(time.Now().Add(job.Delay).Unix()),
+			Member: jobJSON,
+		}).Err()
+	}
+
 	return q.client.LPush(ctx, q.Name, jobJSON).Err()
+}
+
+func (q *Queue) StartScheduler(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now := fmt.Sprintf("%d", time.Now().Unix())
+			jobs, err := q.client.ZRangeByScore(ctx, "delayed", &redis.ZRangeBy{
+				Min: "0",
+				Max: now,
+			}).Result()
+			if err != nil || len(jobs) == 0 {
+				continue
+			}
+			for _, jobJSON := range jobs {
+				q.client.LPush(ctx, q.Name, jobJSON)
+				q.client.ZRem(ctx, "delayed", jobJSON)
+			}
+		}
+	}
 }
 
 func (q *Queue) Dequeue(ctx context.Context) (Job, bool) {

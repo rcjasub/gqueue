@@ -40,6 +40,7 @@ func main() {
 		fmt.Println("Job failed", job.Id)
 	})
 
+	go queue.StartScheduler(ctx)
 	worker.Start(ctx)
 	queue.Enqueue(ctx, job)
 	queue.Enqueue(ctx, job2)

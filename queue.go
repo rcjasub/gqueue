@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"context"
@@ -54,9 +54,11 @@ func (q *Queue) StartScheduler(ctx context.Context) {
 			return
 		case <-ticker.C:
 			now := fmt.Sprintf("%d", time.Now().Unix())
-			jobs, err := q.client.ZRangeByScore(ctx, "delayed", &redis.ZRangeBy{
-				Min: "0",
-				Max: now,
+			jobs, err := q.client.ZRangeArgs(ctx, redis.ZRangeArgs{
+				Key:     "delayed",
+				Start:   "0",
+				Stop:    now,
+				ByScore: true,
 			}).Result()
 			if err != nil || len(jobs) == 0 {
 				continue

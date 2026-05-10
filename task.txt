@@ -1,10 +1,14 @@
-  - Job states in Redis — BullMQ uses multiple Redis lists/sorted sets to track waiting, active, completed, failed separately. Right now your status only 
-  lives in memory during processing.
-  - Delayed jobs — BullMQ uses a Redis sorted set scored by timestamp so jobs fire at the right time. Your current time.Sleep approach blocks a worker.   
+  [DONE] Job states in Redis — status transitions (waiting/active/completed/failed) persisted in Redis with timestamps
+  [DONE] Delayed jobs — Redis sorted set scored by Unix timestamp, scheduler goroutine polls every second and moves ready jobs to main queue
+
+  [NEXT] Retry logic with exponential backoff — fault tolerance, highest resume impact for CockroachDB
+  [NEXT] Dead letter queue — jobs that exhaust retries land here, shows durability thinking
+  [NEXT] Benchmark — load test to get jobs/sec number for resume bullet
+
   - Job progress — workers can report % completion
   - Priorities — higher priority jobs jump the queue
   - Rate limiting — max N jobs per second
   - Repeatable jobs — cron-like scheduling
-  - Stalled job detection — if a worker crashes mid-job, BullMQ reassigns it
+  - Stalled job detection — if a worker crashes mid-job, reassign it
   - Job results storage — completed job data persisted in Redis
   - Events/pub-sub — real-time job updates via Redis pub/sub

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"math"
 )
 
 type ProcessFunc func(j Job) error
@@ -57,9 +58,11 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 		job.Attempts++
 
 		if job.Attempts < job.MaxRetries {
+			job.Delay = time.Duration(math.Pow(2, float64(job.Attempts))) * time.Second
 			w.queue.Enqueue(ctx, job)
+
 		} else {
-			job.Status = StatusFailed
+			job.Status = StatusDeadLetter
 			job.Error = err.Error()
 			job.FailedAt = time.Now()
 			w.queue.client.HSet(ctx, "job:"+job.Id,
@@ -67,6 +70,7 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 				"failedAt", job.FailedAt.Format(time.RFC3339),
 				"error", job.Error,
 			)
+			w.queue.client.LPush(ctx, "dead-letter", job.Id)
 			if w.onFailed != nil {
 				w.onFailed(job)
 			}

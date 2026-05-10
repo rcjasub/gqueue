@@ -12,6 +12,7 @@ const (
 	StatusActive
 	StatusCompleted
 	StatusFailed
+	StatusDeadLetter
 )
 
 type Job struct {
@@ -53,6 +54,9 @@ func (s JobStatus) String() string {
 
 	case StatusFailed:
 		return "failed"
+
+	case StatusDeadLetter:
+		return "dead-letter"
 
 	default:
 		return "unknown"

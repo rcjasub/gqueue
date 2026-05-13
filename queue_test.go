@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -56,6 +57,31 @@ func TestDequeue(t *testing.T) {
 	count := q.client.LLen(ctx, q.Name).Val()
 	if count != 0 {
 		t.Errorf("expected 0 jobs in queue, got %d", count)
+	}
+}
+
+func TestRetry(t *testing.T) {
+	q := newQueue("test-retry")
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, "delayed")
+
+	job := newJob("retry-1", "send-email", "bad@example.com")
+	job.MaxRetries = 3
+
+	worker := newWorker(q, 1)
+	worker.Register("send-email", func(j Job) error {
+		return fmt.Errorf("simulated failure")
+	})
+
+	q.Enqueue(ctx, job)
+	dequeued, _ := q.Dequeue(ctx)
+	worker.processJob(ctx, dequeued)
+
+	delayed := q.client.ZCard(ctx, "delayed").Val()
+	if delayed != 1 {
+		t.Errorf("expected job to be re-queued in delayed set, got %d", delayed)
 	}
 }
 

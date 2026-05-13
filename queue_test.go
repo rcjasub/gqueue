@@ -107,10 +107,31 @@ func TestDeadLetter(t *testing.T) {
 	worker.processJob(ctx, dequeued)
 
 	count := q.client.LLen(ctx, "dead-letter").Val()
-      if count != 1 {                                       
-          t.Errorf("expected job in dead-letter, got %d",
-  count)                                                    
-      }
+	if count != 1 {
+		t.Errorf("expected job in dead-letter, got %d", count)
+	}
+}
 
+func TestNoHandler(t *testing.T) {
+	q := newQueue("test-nohandler")
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, "delayed")
+	q.client.Del(ctx, "dead-letter")
+
+	job := newJob("nohandler-1", "unknown-job-type", "payload")
+	job.Attempts = job.MaxRetries - 1
+
+	worker := newWorker(q, 1)
+
+	q.Enqueue(ctx, job)
+	dequeued, _ := q.Dequeue(ctx)
+	worker.processJob(ctx, dequeued)
+
+	count := q.client.LLen(ctx, "dead-letter").Val()
+	if count != 1 {
+		t.Errorf("expected unhandled job in dead-letter, got %d", count)
+	}
 }
 

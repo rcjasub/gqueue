@@ -3,17 +3,16 @@
   [DONE] Retry logic with exponential backoff — fault tolerance, highest resume impact for CockroachDB
   [DONE] Dead letter queue — jobs that exhaust retries land here, shows durability thinking
   [DONE] Benchmarks — enqueue/dequeue load tests to get jobs/sec number
-  [DONE] Unit tests — TestEnqueue and TestDequeue verify queue correctness
+  [DONE] Unit tests — TestEnqueue, TestDequeue, TestRetry, TestDeadLetter, TestNoHandler
+  [DONE] Job routing by name — Register(name, fn) dispatches jobs to the right handler by job.Name
 
-  [NEXT] Job routing by name — register different handlers per job type (worker.Register("send-email", fn)), dispatcher routes by job.Name
-  [NEXT] Library refactor — move from package main to package gqueue so other projects can import it
+  [NEXT] Dead-letter inspection — ListDead() and RetryDead() to see and requeue failed jobs
+  [NEXT] Priorities — urgent jobs jump ahead of normal ones in the queue
+  [NEXT] Stalled job detection — if a worker crashes mid-job, reassign it instead of losing it
+  [NEXT] Rate limiting — max N jobs per second so you don't overwhelm external services
+  [NEXT] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)
 
-  - Tests for retry and dead-letter — cover the trickiest logic that isn't tested yet
-  - Dead-letter inspection — ListDead() and RetryDead() to requeue failed jobs
   - Job progress — workers can report % completion
-  - Priorities — higher priority jobs jump the queue
-  - Rate limiting — max N jobs per second
-  - Repeatable jobs — cron-like scheduling
-  - Stalled job detection — if a worker crashes mid-job, reassign it
   - Job results storage — completed job data persisted in Redis
   - Events/pub-sub — real-time job updates via Redis pub/sub
+  - Library refactor — move from package main to package gqueue (do this last)

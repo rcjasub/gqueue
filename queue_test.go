@@ -85,3 +85,32 @@ func TestRetry(t *testing.T) {
 	}
 }
 
+func TestDeadLetter(t *testing.T) {
+	q := newQueue("dead-letter-test")
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, "delayed")
+	q.client.Del(ctx, "dead-letter")
+
+	job := newJob("retry-1", "send-email", "bad@example.com")
+	job.MaxRetries = 3
+
+	worker := newWorker(q, 1)
+	worker.Register("send-email", func(j Job) error {
+		return fmt.Errorf("simulated failure")
+	})
+
+	job.Attempts = job.MaxRetries - 1
+	q.Enqueue(ctx, job)
+	dequeued, _ := q.Dequeue(ctx)
+	worker.processJob(ctx, dequeued)
+
+	count := q.client.LLen(ctx, "dead-letter").Val()
+      if count != 1 {                                       
+          t.Errorf("expected job in dead-letter, got %d",
+  count)                                                    
+      }
+
+}
+

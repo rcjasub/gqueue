@@ -18,32 +18,47 @@ func main() {
 		cancel()
 	}()
 
-	job := newJob("1", "send-email", "bad@example.com")
-	job2 := newJob("2", "send-email", "send@example.com")
-	job2.Delay = 2 * time.Second
-	queue := newQueue("email-queue")
+	queue := newQueue("main-queue")
+	worker := newWorker(queue, 3)
 
-	worker := newWorker(queue, func(job Job) error {
-		fmt.Println("processing:", job.Payload)
-
+	worker.Register("send-email", func(job Job) error {
+		fmt.Println("sending email to:", job.Payload)
 		if job.Payload == "bad@example.com" {
-			return fmt.Errorf("invalid email")
+			return fmt.Errorf("invalid email address")
 		}
 		return nil
-	}, 3)
+	})
+
+	worker.Register("resize-image", func(job Job) error {
+		fmt.Println("resizing image:", job.Payload)
+		return nil
+	})
+
+	worker.Register("generate-report", func(job Job) error {
+		fmt.Println("generating report for:", job.Payload)
+		return nil
+	})
 
 	worker.OnCompleted(func(job Job) {
-		fmt.Println("Job finished!", job.Id)
+		fmt.Println("job completed:", job.Id, job.Name)
 	})
 
 	worker.OnFailed(func(job Job) {
-		fmt.Println("Job failed", job.Id)
+		fmt.Println("job failed:", job.Id, job.Name)
 	})
+
+	job := newJob("1", "send-email", "bad@example.com")
+	job2 := newJob("2", "send-email", "user@example.com")
+	job2.Delay = 2 * time.Second
+	job3 := newJob("3", "resize-image", "photo.jpg")
+	job4 := newJob("4", "generate-report", "monthly-sales")
 
 	go queue.StartScheduler(ctx)
 	worker.Start(ctx)
 	queue.Enqueue(ctx, job)
 	queue.Enqueue(ctx, job2)
+	queue.Enqueue(ctx, job3)
+	queue.Enqueue(ctx, job4)
 
 	<-ctx.Done()
 	worker.waitGroup.Wait()

@@ -1,10 +1,15 @@
   [DONE] Job states in Redis — status transitions (waiting/active/completed/failed) persisted in Redis with timestamps
   [DONE] Delayed jobs — Redis sorted set scored by Unix timestamp, scheduler goroutine polls every second and moves ready jobs to main queue
+  [DONE] Retry logic with exponential backoff — fault tolerance, highest resume impact for CockroachDB
+  [DONE] Dead letter queue — jobs that exhaust retries land here, shows durability thinking
+  [DONE] Benchmarks — enqueue/dequeue load tests to get jobs/sec number
+  [DONE] Unit tests — TestEnqueue and TestDequeue verify queue correctness
 
-  [NEXT] Retry logic with exponential backoff — fault tolerance, highest resume impact for CockroachDB
-  [NEXT] Dead letter queue — jobs that exhaust retries land here, shows durability thinking
-  [NEXT] Benchmark — load test to get jobs/sec number for resume bullet
+  [NEXT] Job routing by name — register different handlers per job type (worker.Register("send-email", fn)), dispatcher routes by job.Name
+  [NEXT] Library refactor — move from package main to package gqueue so other projects can import it
 
+  - Tests for retry and dead-letter — cover the trickiest logic that isn't tested yet
+  - Dead-letter inspection — ListDead() and RetryDead() to requeue failed jobs
   - Job progress — workers can report % completion
   - Priorities — higher priority jobs jump the queue
   - Rate limiting — max N jobs per second

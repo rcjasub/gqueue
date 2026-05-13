@@ -12,19 +12,24 @@ type ProcessFunc func(j Job) error
 type Event func(job Job)
 
 type Worker struct {
-	queue       *Queue      // where to get jobs from
-	process     ProcessFunc // what to do with each job
+	queue       *Queue
+	handlers    map[string]ProcessFunc
 	concurrency int
 	onCompleted Event
 	onFailed    Event
 	waitGroup   sync.WaitGroup
 }
 
-func newWorker(queue *Queue, process ProcessFunc, concurrency int) *Worker {
+func newWorker(queue *Queue, concurrency int) *Worker {
 	return &Worker{
 		queue:       queue,
-		process:     process,
-		concurrency: concurrency}
+		handlers:    make(map[string]ProcessFunc),
+		concurrency: concurrency,
+	}
+}
+
+func (w *Worker) Register(name string, fn ProcessFunc) {
+	w.handlers[name] = fn
 }
 
 func (w *Worker) Start(ctx context.Context) {
@@ -52,7 +57,13 @@ func (w *Worker) Start(ctx context.Context) {
 func (w *Worker) processJob(ctx context.Context, job Job) {
 
 	job.Status = StatusActive
-	err := w.process(job)
+	handler, ok := w.handlers[job.Name]
+	if !ok {
+		handler = func(j Job) error {
+			return fmt.Errorf("no handler registered for job type: %s", j.Name)
+		}
+	}
+	err := handler(job)
 
 	if err != nil {
 		job.Attempts++

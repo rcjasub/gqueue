@@ -97,3 +97,26 @@ func (q *Queue) Dequeue(ctx context.Context) (Job, bool) {
 	}
 
 }
+
+func (q *Queue) ListDead(ctx context.Context) ([]Job, error) {
+	ids, err := q.client.LRange(ctx, "dead-letter", 0, -1).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var jobs []Job
+	for _, id := range ids {
+		data, err := q.client.HGetAll(ctx, "job:"+id).Result()
+		if err != nil || len(data) == 0 {
+			continue
+		}
+		jobs = append(jobs, Job{
+			Id:      data["id"],
+			Status:  StatusDeadLetter,
+			Payload: data["payload"],
+			Error:   data["error"],
+		})
+	}
+
+	return jobs, nil
+}

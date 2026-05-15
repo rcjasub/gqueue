@@ -12,6 +12,7 @@
   [NEXT] Rate limiting — max N jobs per second so you don't overwhelm external services
   [NEXT] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)
 
+  - Pause/resume — stop a queue without killing workers
   - Job progress — workers can report % completion
   - Job results storage — completed job data persisted in Redis
   - Events/pub-sub — real-time job updates via Redis pub/sub

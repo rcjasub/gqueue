@@ -112,6 +112,62 @@ func TestDeadLetter(t *testing.T) {
 	}
 }
 
+func TestOnCompleted(t *testing.T) {
+	q := newQueue("test-oncompleted")
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Name)
+
+	job := newJob("completed-1", "send-email", "user@example.com")
+
+	worker := newWorker(q, 1)
+	worker.Register("send-email", func(j Job) error {
+		return nil
+	})
+
+	fired := false
+	worker.OnCompleted(func(j Job) {
+		fired = true
+	})
+
+	q.Enqueue(ctx, job)
+	dequeued, _ := q.Dequeue(ctx)
+	worker.processJob(ctx, dequeued)
+
+	if !fired {
+		t.Error("expected OnCompleted callback to fire, but it did not")
+	}
+}
+
+func TestOnFailed(t *testing.T) {
+	q := newQueue("test-onfailed")
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, "dead-letter")
+
+	job := newJob("failed-1", "send-email", "bad@example.com")
+	job.Attempts = job.MaxRetries - 1
+
+	worker := newWorker(q, 1)
+	worker.Register("send-email", func(j Job) error {
+		return fmt.Errorf("simulated failure")
+	})
+
+	fired := false
+	worker.OnFailed(func(j Job) {
+		fired = true
+	})
+
+	q.Enqueue(ctx, job)
+	dequeued, _ := q.Dequeue(ctx)
+	worker.processJob(ctx, dequeued)
+
+	if !fired {
+		t.Error("expected OnFailed callback to fire, but it did not")
+	}
+}
+
 func TestNoHandler(t *testing.T) {
 	q := newQueue("test-nohandler")
 	ctx := context.Background()

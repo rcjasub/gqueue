@@ -33,7 +33,7 @@ func (q *Queue) Enqueue(ctx context.Context, job Job) error {
 		"payload", job.Payload,
 		"createdAt", job.CreatedAt.Format(time.RFC3339),
 	)
-	
+
 	if job.Delay > 0 {
 		return q.client.ZAdd(ctx, "delayed", redis.Z{
 			Score:  float64(time.Now().Add(job.Delay).Unix()),
@@ -119,4 +119,22 @@ func (q *Queue) ListDead(ctx context.Context) ([]Job, error) {
 	}
 
 	return jobs, nil
+}
+
+func (q *Queue) RetryDead(ctx context.Context, id string) error {
+	data, err := q.client.HGetAll(ctx, "job:"+id).Result()
+	if err != nil || len(data) == 0 {
+		return fmt.Errorf("job not found: %s", id)
+	}
+
+	job := Job{
+		Id:      data["id"],
+		Status:  StatusWaiting,
+		Payload: data["payload"],
+		Attempts: 0,
+	}
+
+	q.client.LRem(ctx, "dead-letter", 1, id)
+
+	return q.Enqueue(ctx, job)
 }

@@ -10,13 +10,13 @@ import (
 
 type Queue struct {
 	client *redis.Client
-	Name   string
+	Names []string
 }
 
-func newQueue(name string) *Queue {
+func newQueue(name []string) *Queue {
 	return &Queue{client: redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
-	}), Name: name}
+	}), Names: name}
 }
 
 // The ctx gets passed to Redis operations so that if the context is cancelled
@@ -41,7 +41,7 @@ func (q *Queue) Enqueue(ctx context.Context, job Job) error {
 		}).Err()
 	}
 
-	return q.client.LPush(ctx, q.Name, jobJSON).Err()
+	return q.client.LPush(ctx, q.Names[job.Priority], jobJSON).Err()
 }
 
 func (q *Queue) StartScheduler(ctx context.Context) {
@@ -64,7 +64,9 @@ func (q *Queue) StartScheduler(ctx context.Context) {
 				continue
 			}
 			for _, jobJSON := range jobs {
-				q.client.LPush(ctx, q.Name, jobJSON)
+				var job Job
+				json.Unmarshal([]byte(jobJSON), &job)
+				q.client.LPush(ctx, q.Names[job.Priority], jobJSON)
 				q.client.ZRem(ctx, "delayed", jobJSON)
 			}
 		}
@@ -74,7 +76,7 @@ func (q *Queue) StartScheduler(ctx context.Context) {
 func (q *Queue) Dequeue(ctx context.Context) (Job, bool) {
 
 	for {
-		result, err := q.client.BRPop(ctx, 1*time.Second, q.Name).Result()
+		result, err := q.client.BRPop(ctx, 1*time.Second, q.Names...).Result()
 
 		//The select checks if context is cancelled
 		if err == redis.Nil {

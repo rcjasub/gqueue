@@ -7,7 +7,7 @@ import (
 )
 
 func BenchmarkEnqueue(b *testing.B) {
-	q := newQueue("bench")
+	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
@@ -18,7 +18,7 @@ func BenchmarkEnqueue(b *testing.B) {
 }
 
 func BenchmarkDequeue(b *testing.B) {
-	q := newQueue("bench")
+	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
@@ -32,39 +32,39 @@ func BenchmarkDequeue(b *testing.B) {
 }
 
 func TestEnqueue(t *testing.T) {
-	q := newQueue("bench")
+	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 	q.Enqueue(ctx, job)
 
-	count := q.client.LLen(ctx, q.Name).Val()
+	count := q.client.LLen(ctx, q.Names[1]).Val()
 	if count != 1 {
 		t.Errorf("expected 1 job in queue, got %d", count)
 	}
 }
 
 func TestDequeue(t *testing.T) {
-	q := newQueue("bench")
+	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 	q.Enqueue(ctx, job)
 	q.Dequeue(ctx)
 
-	count := q.client.LLen(ctx, q.Name).Val()
+	count := q.client.LLen(ctx, q.Names[1]).Val()
 	if count != 0 {
 		t.Errorf("expected 0 jobs in queue, got %d", count)
 	}
 }
 
 func TestRetry(t *testing.T) {
-	q := newQueue("test-retry")
+	q := newQueue([]string{"retry:high", "retry:mid", "retry:low"})
 	ctx := context.Background()
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "delayed")
 
 	job := newJob("retry-1", "send-email", "bad@example.com")
@@ -86,10 +86,10 @@ func TestRetry(t *testing.T) {
 }
 
 func TestDeadLetter(t *testing.T) {
-	q := newQueue("dead-letter-test")
+	q := newQueue([]string{"dl:high", "dl:mid", "dl:low"})
 	ctx := context.Background()
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "delayed")
 	q.client.Del(ctx, "dead-letter")
 
@@ -113,10 +113,10 @@ func TestDeadLetter(t *testing.T) {
 }
 
 func TestOnCompleted(t *testing.T) {
-	q := newQueue("test-oncompleted")
+	q := newQueue([]string{"oc:high", "oc:mid", "oc:low"})
 	ctx := context.Background()
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 
 	job := newJob("completed-1", "send-email", "user@example.com")
 
@@ -140,10 +140,10 @@ func TestOnCompleted(t *testing.T) {
 }
 
 func TestOnFailed(t *testing.T) {
-	q := newQueue("test-onfailed")
+	q := newQueue([]string{"of:high", "of:mid", "of:low"})
 	ctx := context.Background()
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "dead-letter")
 
 	job := newJob("failed-1", "send-email", "bad@example.com")
@@ -169,10 +169,10 @@ func TestOnFailed(t *testing.T) {
 }
 
 func TestNoHandler(t *testing.T) {
-	q := newQueue("test-nohandler")
+	q := newQueue([]string{"nh:high", "nh:mid", "nh:low"})
 	ctx := context.Background()
 
-	q.client.Del(ctx, q.Name)
+	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "delayed")
 	q.client.Del(ctx, "dead-letter")
 

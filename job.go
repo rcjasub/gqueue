@@ -15,11 +15,20 @@ const (
 	StatusDeadLetter
 )
 
+type JobPriority int
+
+const (
+	PriorityHigh JobPriority = iota
+	PriorityMid
+	PriorityLow
+)
+
 type Job struct {
 	Id          string
 	Name        string
 	Payload     string
 	Status      JobStatus
+	Priority    JobPriority
 	Attempts    int
 	MaxRetries  int
 	Delay       time.Duration
@@ -36,6 +45,7 @@ func newJob(id string, name string, payload string) Job {
 		Name:       name,
 		Payload:    payload,
 		Status:     StatusWaiting,
+		Priority:   PriorityMid,
 		MaxRetries: 3,
 		CreatedAt:  time.Now(),
 	}

@@ -6,8 +6,9 @@
   [DONE] Unit tests — TestEnqueue, TestDequeue, TestRetry, TestDeadLetter, TestNoHandler
   [DONE] Job routing by name — Register(name, fn) dispatches jobs to the right handler by job.Name
 
-  [NEXT] Dead-letter inspection — ListDead() and RetryDead() to see and requeue failed jobs
+  [DONE] Dead-letter inspection — ListDead() and RetryDead() to see and requeue failed jobs
   [NEXT] Priorities — urgent jobs jump ahead of normal ones in the queue
+    [TODO] TestPriority — enqueue high and low priority jobs, verify high comes out first
   [NEXT] Stalled job detection — if a worker crashes mid-job, reassign it instead of losing it
   [NEXT] Rate limiting — max N jobs per second so you don't overwhelm external services
   [NEXT] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)

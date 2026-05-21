@@ -168,6 +168,34 @@ func TestOnFailed(t *testing.T) {
 	}
 }
 
+func TestPriority(t *testing.T) {
+	q := newQueue([]string{"prio:high", "prio:mid", "prio:low"})
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Names...)
+
+	low := newJob("prio-low", "task", "payload")
+	low.Priority = PriorityLow
+
+	mid := newJob("prio-mid", "task", "payload")
+	mid.Priority = PriorityMid
+
+	high := newJob("prio-high", "task", "payload")
+	high.Priority = PriorityHigh
+
+	q.Enqueue(ctx, low)
+	q.Enqueue(ctx, mid)
+	q.Enqueue(ctx, high)
+
+	expected := []string{"prio-high", "prio-mid", "prio-low"}
+	for _, id := range expected {
+		job, _ := q.Dequeue(ctx)
+		if job.Id != id {
+			t.Errorf("expected job %q, got %q", id, job.Id)
+		}
+	}
+}
+
 func TestNoHandler(t *testing.T) {
 	q := newQueue([]string{"nh:high", "nh:mid", "nh:low"})
 	ctx := context.Background()

@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
+	"math"
 	"sync"
 	"time"
-	"math"
 )
 
 type ProcessFunc func(j Job) error
@@ -48,7 +49,12 @@ func (w *Worker) Start(ctx context.Context) {
 					"startedAt", job.StartedAt.Format(time.RFC3339),
 					"worker", fmt.Sprintf("worker-%d", i),
 				)
+				w.queue.client.ZAdd(ctx, "active-jobs", redis.Z{
+					Score:  float64(job.StartedAt.Unix()),
+					Member: job.Id,
+				})
 				w.processJob(ctx, job)
+				w.queue.client.ZRem(ctx, "active-jobs", job.Id)
 			}
 		}()
 	}

@@ -198,6 +198,31 @@ func TestPriority(t *testing.T) {
 	}
 }
 
+func TestStalledJobDetection(t *testing.T) {
+	q := newQueue([]string{"stall:high", "stall:mid", "stall:low"})
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Names...)
+	q.client.Del(ctx, "active-jobs")
+
+	job := newJob("stall-1", "send-email", "payload")
+	q.Enqueue(ctx, job)
+
+	// Simulate worker picking up the job but crashing before finishing
+	dequeued, _ := q.Dequeue(ctx)
+	q.client.ZAdd(ctx, "active-jobs", redis.Z{
+		Score:  float64(time.Now().Add(-2 * time.Minute).Unix()),
+		Member: dequeued.Id,
+	})
+
+	q.DetectStalled(ctx, 1*time.Minute)
+
+	count := q.client.LLen(ctx, q.Names[PriorityMid]).Val()
+	if count != 1 {
+		t.Errorf("expected stalled job to be requeued, got %d jobs in queue", count)
+	}
+}
+
 func TestNoHandler(t *testing.T) {
 	q := newQueue([]string{"nh:high", "nh:mid", "nh:low"})
 	ctx := context.Background()

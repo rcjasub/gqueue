@@ -9,7 +9,7 @@ import (
 )
 
 func BenchmarkEnqueue(b *testing.B) {
-	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
+	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
@@ -20,7 +20,7 @@ func BenchmarkEnqueue(b *testing.B) {
 }
 
 func BenchmarkDequeue(b *testing.B) {
-	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
+	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
@@ -34,7 +34,7 @@ func BenchmarkDequeue(b *testing.B) {
 }
 
 func TestEnqueue(t *testing.T) {
-	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
@@ -48,7 +48,7 @@ func TestEnqueue(t *testing.T) {
 }
 
 func TestDequeue(t *testing.T) {
-	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 	job := newJob("1", "bench-job", "payload")
 
@@ -63,7 +63,7 @@ func TestDequeue(t *testing.T) {
 }
 
 func TestRetry(t *testing.T) {
-	q := newQueue([]string{"retry:high", "retry:mid", "retry:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -88,7 +88,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestDeadLetter(t *testing.T) {
-	q := newQueue([]string{"dl:high", "dl:mid", "dl:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -115,7 +115,7 @@ func TestDeadLetter(t *testing.T) {
 }
 
 func TestOnCompleted(t *testing.T) {
-	q := newQueue([]string{"oc:high", "oc:mid", "oc:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -142,7 +142,7 @@ func TestOnCompleted(t *testing.T) {
 }
 
 func TestOnFailed(t *testing.T) {
-	q := newQueue([]string{"of:high", "of:mid", "of:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -171,7 +171,7 @@ func TestOnFailed(t *testing.T) {
 }
 
 func TestPriority(t *testing.T) {
-	q := newQueue([]string{"prio:high", "prio:mid", "prio:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -199,7 +199,7 @@ func TestPriority(t *testing.T) {
 }
 
 func TestStalledJobDetection(t *testing.T) {
-	q := newQueue([]string{"stall:high", "stall:mid", "stall:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -224,7 +224,7 @@ func TestStalledJobDetection(t *testing.T) {
 }
 
 func TestNoHandler(t *testing.T) {
-	q := newQueue([]string{"nh:high", "nh:mid", "nh:low"})
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -246,3 +246,20 @@ func TestNoHandler(t *testing.T) {
 	}
 }
 
+func TestRateLimit (t *testing.T) {
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	ctx := context.Background()
+
+    q.client.Del(ctx, "ratelimit:"+q.Name);
+	maxTokens := 3
+	refillRate := 1.0
+
+	q.Allow(ctx, maxTokens, refillRate)
+	q.Allow(ctx, maxTokens, refillRate)
+	q.Allow(ctx, maxTokens, refillRate)
+	allowed := q.Allow(ctx, maxTokens, refillRate)
+
+	if(allowed) {
+		t.Error("expected 4th call to be denied, but it was allowed")
+	}
+}

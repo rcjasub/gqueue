@@ -18,7 +18,7 @@ func main() {
 		cancel()
 	}()
 
-	queue := newQueue([]string{"main:high", "main:mid", "main:low"})
+	queue := newQueue([]string{"main:high", "main:mid", "main:low"}, "default")
 	worker := newWorker(queue, 3)
 
 	worker.Register("send-email", func(job Job) error {

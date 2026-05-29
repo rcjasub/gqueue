@@ -19,6 +19,8 @@ type Worker struct {
 	onCompleted Event
 	onFailed    Event
 	waitGroup   sync.WaitGroup
+	maxTokens   int
+	refillRate  float64
 }
 
 func newWorker(queue *Queue, concurrency int) *Worker {
@@ -61,7 +63,10 @@ func (w *Worker) Start(ctx context.Context) {
 }
 
 func (w *Worker) processJob(ctx context.Context, job Job) {
-
+    for !w.queue.Allow(ctx, w.maxTokens, w.refillRate) {
+		time.Sleep(100 * time.Millisecond)
+	}
+    
 	job.Status = StatusActive
 	handler, ok := w.handlers[job.Name]
 	if !ok {

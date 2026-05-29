@@ -9,8 +9,8 @@
   [DONE] Dead-letter inspection — ListDead() and RetryDead() to see and requeue failed jobs
   [DONE] Priorities — urgent jobs jump ahead of normal ones in the queue
   [DONE] TestPriority — enqueue high and low priority jobs, verify high comes out first
-  [NEXT] Stalled job detection — if a worker crashes mid-job, reassign it instead of losing it
-  [NEXT] Rate limiting — max N jobs per second so you don't overwhelm external services
+  [DONE] Stalled job detection — if a worker crashes mid-job, reassign it instead of losing it
+  [DONE] Rate limiting — max N jobs per second so you don't overwhelm external services
   [NEXT] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)
 
   - Pause/resume — stop a queue without killing workers

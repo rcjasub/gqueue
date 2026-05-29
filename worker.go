@@ -63,10 +63,13 @@ func (w *Worker) Start(ctx context.Context) {
 }
 
 func (w *Worker) processJob(ctx context.Context, job Job) {
-    for !w.queue.Allow(ctx, w.maxTokens, w.refillRate) {
-		time.Sleep(100 * time.Millisecond)
+
+	if w.maxTokens != 0 {
+		for !w.queue.Allow(ctx, w.maxTokens, w.refillRate) {
+			time.Sleep(100 * time.Millisecond)  // pause before checking again
+		}
 	}
-    
+
 	job.Status = StatusActive
 	handler, ok := w.handlers[job.Name]
 	if !ok {

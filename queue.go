@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"github.com/robfig/cron/v3"
 	"strconv"
 	"time"
 )
@@ -177,6 +178,73 @@ func (q *Queue) StartStalledDetector(ctx context.Context, threshold time.Duratio
 			return
 		case <-ticker.C:
 			q.DetectStalled(ctx, threshold)
+		}
+	}
+}
+
+// AddRepeatable registers a repeatable job in Redis, scored by its first next-run time.
+func (q *Queue) AddRepeatable(ctx context.Context, rj RepeatableJob) error {
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	schedule, err := parser.Parse(rj.Cron)
+	if err != nil {
+		return fmt.Errorf("invalid cron %q: %w", rj.Cron, err)
+	}
+	next := schedule.Next(time.Now())
+	data, err := json.Marshal(rj)
+	if err != nil {
+		return err
+	}
+	return q.client.ZAdd(ctx, "repeatable", redis.Z{
+		Score:  float64(next.Unix()),
+		Member: string(data),
+	}).Err()
+}
+
+// tickRepeatable fires all due repeatable jobs and re-schedules them.
+func (q *Queue) tickRepeatable(ctx context.Context, parser cron.Parser) {
+	now := fmt.Sprintf("%d", time.Now().Unix())
+	members, err := q.client.ZRangeArgs(ctx, redis.ZRangeArgs{
+		Key:     "repeatable",
+		Start:   "0",
+		Stop:    now,
+		ByScore: true,
+	}).Result()
+	if err != nil || len(members) == 0 {
+		return
+	}
+	for _, member := range members {
+		var rj RepeatableJob
+		if err := json.Unmarshal([]byte(member), &rj); err != nil {
+			q.client.ZRem(ctx, "repeatable", member)
+			continue
+		}
+		job := newJob(fmt.Sprintf("%s-%d", rj.Name, time.Now().UnixNano()), rj.JobName, rj.Payload)
+		job.Priority = rj.Priority
+		q.Enqueue(ctx, job)
+
+		q.client.ZRem(ctx, "repeatable", member)
+		schedule, err := parser.Parse(rj.Cron)
+		if err != nil {
+			continue
+		}
+		next := schedule.Next(time.Now())
+		q.client.ZAdd(ctx, "repeatable", redis.Z{
+			Score:  float64(next.Unix()),
+			Member: member,
+		})
+	}
+}
+
+func (q *Queue) StartRepeatableScheduler(ctx context.Context) {
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			q.tickRepeatable(ctx, parser)
 		}
 	}
 }

@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"github.com/robfig/cron/v3"
 	"testing"
 	"time"
 )
@@ -246,7 +248,45 @@ func TestNoHandler(t *testing.T) {
 	}
 }
 
-func TestRateLimit (t *testing.T) {
+func TestRepeatableJob(t *testing.T) {
+	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	ctx := context.Background()
+
+	q.client.Del(ctx, q.Names...)
+	q.client.Del(ctx, "repeatable")
+
+	rj := RepeatableJob{
+		Name:     "test-heartbeat",
+		JobName:  "send-email",
+		Payload:  "user@example.com",
+		Priority: PriorityMid,
+		Cron:     "@every 1m",
+	}
+
+	// Seed with a past timestamp so the scheduler sees it as due immediately.
+	data, _ := json.Marshal(rj)
+	q.client.ZAdd(ctx, "repeatable", redis.Z{
+		Score:  float64(time.Now().Add(-5 * time.Second).Unix()),
+		Member: string(data),
+	})
+
+	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	q.tickRepeatable(ctx, parser)
+
+	// One job instance should have been enqueued.
+	count := q.client.LLen(ctx, q.Names[PriorityMid]).Val()
+	if count != 1 {
+		t.Errorf("expected 1 job enqueued, got %d", count)
+	}
+
+	// The repeatable definition should have been re-scheduled (still 1 entry in the set).
+	remaining := q.client.ZCard(ctx, "repeatable").Val()
+	if remaining != 1 {
+		t.Errorf("expected repeatable job to be re-scheduled, got %d entries in set", remaining)
+	}
+}
+
+func TestRateLimit(t *testing.T) {
 	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 

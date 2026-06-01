@@ -54,11 +54,21 @@ func main() {
 	job4 := newJob("4", "generate-report", "monthly-sales")
 
 	go queue.StartScheduler(ctx)
+	go queue.StartRepeatableScheduler(ctx)
 	worker.Start(ctx)
 	queue.Enqueue(ctx, job)
 	queue.Enqueue(ctx, job2)
 	queue.Enqueue(ctx, job3)
 	queue.Enqueue(ctx, job4)
+
+	// Repeatable job: fires every 5 seconds until the program is stopped.
+	queue.AddRepeatable(ctx, RepeatableJob{
+		Name:     "heartbeat-email",
+		JobName:  "send-email",
+		Payload:  "heartbeat@example.com",
+		Priority: PriorityLow,
+		Cron:     "@every 5s",
+	})
 
 	<-ctx.Done()
 	worker.waitGroup.Wait()

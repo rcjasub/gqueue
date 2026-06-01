@@ -11,7 +11,7 @@
   [DONE] TestPriority — enqueue high and low priority jobs, verify high comes out first
   [DONE] Stalled job detection — if a worker crashes mid-job, reassign it instead of losing it
   [DONE] Rate limiting — max N jobs per second so you don't overwhelm external services
-  [NEXT] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)
+  [DONE] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)
 
   - Pause/resume — stop a queue without killing workers
   - Job progress — workers can report % completion

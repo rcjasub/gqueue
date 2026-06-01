@@ -73,6 +73,17 @@ func (s JobStatus) String() string {
 	}
 }
 
+// RepeatableJob defines a job that runs on a cron schedule.
+// Cron supports standard 6-field expressions (sec min hour dom mon dow)
+// and descriptors like @every 5s, @hourly, @daily.
+type RepeatableJob struct {
+	Name     string      // unique key identifying this repeatable definition
+	JobName  string      // matches a registered worker handler
+	Payload  string
+	Priority JobPriority
+	Cron     string
+}
+
 func printJob(j Job) {
 	fmt.Printf("Job[%s] name=%s status=%s attempts=%d\n", j.Id, j.Name, j.Status, j.Attempts)
 }

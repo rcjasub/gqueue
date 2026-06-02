@@ -55,6 +55,20 @@ func main() {
 	job3 := newJob("3", "resize-image", "photo.jpg")
 	job4 := newJob("4", "generate-report", "monthly-sales")
 
+	pubsub := queue.Subscribe(ctx, "job:completed", "job:failed")
+	go func() {
+		ch := pubsub.Channel()
+		for {
+			select {
+			case <-ctx.Done():
+				pubsub.Close()
+				return
+			case msg := <-ch:
+				fmt.Printf("[event] channel=%s jobId=%s\n", msg.Channel, msg.Payload)
+			}
+		}
+	}()
+
 	go queue.StartScheduler(ctx)
 	go queue.StartRepeatableScheduler(ctx)
 	worker.Start(ctx)

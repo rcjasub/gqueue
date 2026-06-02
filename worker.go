@@ -106,6 +106,7 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 				"error", job.Error,
 			)
 			w.queue.client.LPush(ctx, "dead-letter", job.Id)
+			w.queue.client.Publish(ctx, "job:failed", job.Id)
 			if w.onFailed != nil {
 				w.onFailed(job)
 			}
@@ -118,6 +119,7 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 			"completedAt", job.CompletedAt.Format(time.RFC3339),
 			"result", result,
 		)
+		w.queue.client.Publish(ctx, "job:completed", job.Id)
 		if w.onCompleted != nil {
 			w.onCompleted(job)
 		}

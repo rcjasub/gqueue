@@ -182,6 +182,10 @@ func (q *Queue) StartStalledDetector(ctx context.Context, threshold time.Duratio
 	}
 }
 
+func (q *Queue) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
+	return q.client.Subscribe(ctx, channels...)
+}
+
 func (q *Queue) Pause(ctx context.Context) error {
 	return q.client.Set(ctx, "queue:"+q.Name+":paused", "1", 0).Err()
 }

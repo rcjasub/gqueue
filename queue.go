@@ -1,4 +1,4 @@
-﻿package main
+﻿package gqueue
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type Queue struct {
 	Name string
 }
 
-func newQueue(name []string, n string) *Queue {
+func NewQueue(name []string, n string) *Queue {
 	return &Queue{client: redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	}), Names: name,
@@ -235,7 +235,7 @@ func (q *Queue) tickRepeatable(ctx context.Context, parser cron.Parser) {
 			q.client.ZRem(ctx, "repeatable", member)
 			continue
 		}
-		job := newJob(fmt.Sprintf("%s-%d", rj.Name, time.Now().UnixNano()), rj.JobName, rj.Payload)
+		job := NewJob(fmt.Sprintf("%s-%d", rj.Name, time.Now().UnixNano()), rj.JobName, rj.Payload)
 		job.Priority = rj.Priority
 		q.Enqueue(ctx, job)
 

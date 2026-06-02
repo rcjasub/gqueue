@@ -16,6 +16,6 @@
   [DONE]Pause/resume — stop a queue without killing workers
   [DONE]Job progress — workers can report % completion
   [DONE]Job results storage — completed job data persisted in Redis
-  [DONE] Events/pub-sub — real-time job updates via Redis pub/sub
-  - Library refactor — move from package main to package gqueue (do this last)
+  [DONE]Events/pub-sub — real-time job updates via Redis pub/sub
+  [DONE]Library refactor — move from package main to package gqueue (do this last)
   

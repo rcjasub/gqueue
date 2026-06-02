@@ -1,4 +1,4 @@
-package main
+package gqueue
 
 import (
 	"context"
@@ -23,6 +23,7 @@ end
 
 local elapsed = now - last_refill
 local refill = math.floor(elapsed * refill_rate)
+
 tokens = math.min(max_tokens, tokens + refill)
 
 if refill > 0 then

@@ -1,4 +1,4 @@
-package main
+package gqueue
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type Worker struct {
 	refillRate  float64
 }
 
-func newWorker(queue *Queue, concurrency int) *Worker {
+func NewWorker(queue *Queue, concurrency int) *Worker {
 	return &Worker{
 		queue:       queue,
 		handlers:    make(map[string]ProcessFunc),
@@ -134,4 +134,8 @@ func (w *Worker) OnCompleted(fn Event) {
 
 func (w *Worker) OnFailed(fn Event) {
 	w.onFailed = fn
+}
+
+func (w *Worker) Wait() {
+	w.waitGroup.Wait()
 }

@@ -1,4 +1,4 @@
-package main
+package gqueue
 
 import (
 	"fmt"
@@ -39,7 +39,7 @@ type Job struct {
 	Error       string
 }
 
-func newJob(id string, name string, payload string) Job {
+func NewJob(id string, name string, payload string) Job {
 	return Job{
 		Id:         id,
 		Name:       name,

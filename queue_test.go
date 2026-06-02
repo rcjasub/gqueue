@@ -1,4 +1,4 @@
-package main
+package gqueue
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 )
 
 func BenchmarkEnqueue(b *testing.B) {
-	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
+	q := NewQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
 	ctx := context.Background()
-	job := newJob("1", "bench-job", "payload")
+	job := NewJob("1", "bench-job", "payload")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -22,9 +22,9 @@ func BenchmarkEnqueue(b *testing.B) {
 }
 
 func BenchmarkDequeue(b *testing.B) {
-	q := newQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
+	q := NewQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
 	ctx := context.Background()
-	job := newJob("1", "bench-job", "payload")
+	job := NewJob("1", "bench-job", "payload")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -36,9 +36,9 @@ func BenchmarkDequeue(b *testing.B) {
 }
 
 func TestEnqueue(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
-	job := newJob("1", "bench-job", "payload")
+	job := NewJob("1", "bench-job", "payload")
 
 	q.client.Del(ctx, q.Names...)
 	q.Enqueue(ctx, job)
@@ -50,9 +50,9 @@ func TestEnqueue(t *testing.T) {
 }
 
 func TestDequeue(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
-	job := newJob("1", "bench-job", "payload")
+	job := NewJob("1", "bench-job", "payload")
 
 	q.client.Del(ctx, q.Names...)
 	q.Enqueue(ctx, job)
@@ -65,16 +65,16 @@ func TestDequeue(t *testing.T) {
 }
 
 func TestRetry(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "delayed")
 
-	job := newJob("retry-1", "send-email", "bad@example.com")
+	job := NewJob("retry-1", "send-email", "bad@example.com")
 	job.MaxRetries = 3
 
-	worker := newWorker(q, 1)
+	worker := NewWorker(q, 1)
 	worker.Register("send-email", func(j Job, report func(pct int)) (string, error) {
 		return "", fmt.Errorf("simulated failure")
 	})
@@ -90,17 +90,17 @@ func TestRetry(t *testing.T) {
 }
 
 func TestDeadLetter(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "delayed")
 	q.client.Del(ctx, "dead-letter")
 
-	job := newJob("retry-1", "send-email", "bad@example.com")
+	job := NewJob("retry-1", "send-email", "bad@example.com")
 	job.MaxRetries = 3
 
-	worker := newWorker(q, 1)
+	worker := NewWorker(q, 1)
 	worker.Register("send-email", func(j Job, report func(pct int)) (string, error) {
 		return "", fmt.Errorf("simulated failure")
 	})
@@ -117,14 +117,14 @@ func TestDeadLetter(t *testing.T) {
 }
 
 func TestOnCompleted(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 
-	job := newJob("completed-1", "send-email", "user@example.com")
+	job := NewJob("completed-1", "send-email", "user@example.com")
 
-	worker := newWorker(q, 1)
+	worker := NewWorker(q, 1)
 	worker.Register("send-email", func(j Job, report func(pct int)) (string, error) {
 		return "done", nil
 	})
@@ -144,16 +144,16 @@ func TestOnCompleted(t *testing.T) {
 }
 
 func TestOnFailed(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "dead-letter")
 
-	job := newJob("failed-1", "send-email", "bad@example.com")
+	job := NewJob("failed-1", "send-email", "bad@example.com")
 	job.Attempts = job.MaxRetries - 1
 
-	worker := newWorker(q, 1)
+	worker := NewWorker(q, 1)
 	worker.Register("send-email", func(j Job, report func(pct int)) (string, error) {
 		return "", fmt.Errorf("simulated failure")
 	})
@@ -173,18 +173,18 @@ func TestOnFailed(t *testing.T) {
 }
 
 func TestPriority(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 
-	low := newJob("prio-low", "task", "payload")
+	low := NewJob("prio-low", "task", "payload")
 	low.Priority = PriorityLow
 
-	mid := newJob("prio-mid", "task", "payload")
+	mid := NewJob("prio-mid", "task", "payload")
 	mid.Priority = PriorityMid
 
-	high := newJob("prio-high", "task", "payload")
+	high := NewJob("prio-high", "task", "payload")
 	high.Priority = PriorityHigh
 
 	q.Enqueue(ctx, low)
@@ -201,13 +201,13 @@ func TestPriority(t *testing.T) {
 }
 
 func TestStalledJobDetection(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "active-jobs")
 
-	job := newJob("stall-1", "send-email", "payload")
+	job := NewJob("stall-1", "send-email", "payload")
 	q.Enqueue(ctx, job)
 
 	// Simulate worker picking up the job but crashing before finishing
@@ -226,17 +226,17 @@ func TestStalledJobDetection(t *testing.T) {
 }
 
 func TestNoHandler(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
 	q.client.Del(ctx, "delayed")
 	q.client.Del(ctx, "dead-letter")
 
-	job := newJob("nohandler-1", "unknown-job-type", "payload")
+	job := NewJob("nohandler-1", "unknown-job-type", "payload")
 	job.Attempts = job.MaxRetries - 1
 
-	worker := newWorker(q, 1)
+	worker := NewWorker(q, 1)
 
 	q.Enqueue(ctx, job)
 	dequeued, _ := q.Dequeue(ctx)
@@ -249,7 +249,7 @@ func TestNoHandler(t *testing.T) {
 }
 
 func TestRepeatableJob(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -287,7 +287,7 @@ func TestRepeatableJob(t *testing.T) {
 }
 
 func TestRateLimit(t *testing.T) {
-	q := newQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
     q.client.Del(ctx, "ratelimit:"+q.Name);

@@ -21,20 +21,22 @@ func main() {
 	queue := newQueue([]string{"main:high", "main:mid", "main:low"}, "default")
 	worker := newWorker(queue, 3)
 
-	worker.Register("send-email", func(job Job) error {
+	worker.Register("send-email", func(job Job, report func(pct int)) error {
+		report(50)
 		fmt.Println("sending email to:", job.Payload)
 		if job.Payload == "bad@example.com" {
 			return fmt.Errorf("invalid email address")
 		}
+		report(100)
 		return nil
 	})
 
-	worker.Register("resize-image", func(job Job) error {
+	worker.Register("resize-image", func(job Job, report func(pct int)) error {
 		fmt.Println("resizing image:", job.Payload)
 		return nil
 	})
 
-	worker.Register("generate-report", func(job Job) error {
+	worker.Register("generate-report", func(job Job, report func(pct int)) error {
 		fmt.Println("generating report for:", job.Payload)
 		return nil
 	})

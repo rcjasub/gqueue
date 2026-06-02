@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type ProcessFunc func(j Job) error
+type ProcessFunc func(j Job, report func(pct int)) error
 type Event func(job Job)
 
 type Worker struct {
@@ -78,13 +78,16 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 	}
 
 	job.Status = StatusActive
+	report := func(pct int) {
+		w.queue.client.HSet(ctx, "job:"+job.Id, "progress", pct)
+	}
 	handler, ok := w.handlers[job.Name]
 	if !ok {
-		handler = func(j Job) error {
+		handler = func(j Job, report func(pct int)) error {
 			return fmt.Errorf("no handler registered for job type: %s", j.Name)
 		}
 	}
-	err := handler(job)
+	err := handler(job, report)
 
 	if err != nil {
 		job.Attempts++

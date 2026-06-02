@@ -13,8 +13,8 @@
   [DONE] Rate limiting — max N jobs per second so you don't overwhelm external services
   [DONE] Repeatable jobs — cron-like scheduling (run every hour, every day, etc.)
 
-  - Pause/resume — stop a queue without killing workers
-  - Job progress — workers can report % completion
+  [DONE]Pause/resume — stop a queue without killing workers
+  [DONE]Job progress — workers can report % completion
   - Job results storage — completed job data persisted in Redis
   - Events/pub-sub — real-time job updates via Redis pub/sub
   - Library refactor — move from package main to package gqueue (do this last)

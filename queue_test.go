@@ -75,7 +75,7 @@ func TestRetry(t *testing.T) {
 	job.MaxRetries = 3
 
 	worker := newWorker(q, 1)
-	worker.Register("send-email", func(j Job) error {
+	worker.Register("send-email", func(j Job, report func(pct int)) error {
 		return fmt.Errorf("simulated failure")
 	})
 
@@ -101,7 +101,7 @@ func TestDeadLetter(t *testing.T) {
 	job.MaxRetries = 3
 
 	worker := newWorker(q, 1)
-	worker.Register("send-email", func(j Job) error {
+	worker.Register("send-email", func(j Job, report func(pct int)) error {
 		return fmt.Errorf("simulated failure")
 	})
 
@@ -125,7 +125,7 @@ func TestOnCompleted(t *testing.T) {
 	job := newJob("completed-1", "send-email", "user@example.com")
 
 	worker := newWorker(q, 1)
-	worker.Register("send-email", func(j Job) error {
+	worker.Register("send-email", func(j Job, report func(pct int)) error {
 		return nil
 	})
 
@@ -154,7 +154,7 @@ func TestOnFailed(t *testing.T) {
 	job.Attempts = job.MaxRetries - 1
 
 	worker := newWorker(q, 1)
-	worker.Register("send-email", func(j Job) error {
+	worker.Register("send-email", func(j Job, report func(pct int)) error {
 		return fmt.Errorf("simulated failure")
 	})
 

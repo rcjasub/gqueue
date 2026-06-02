@@ -41,6 +41,13 @@ func (w *Worker) Start(ctx context.Context) {
 		go func() {
 			defer w.waitGroup.Done() // defer means "run this when the function returns"
 			for {
+				for w.queue.IsPaused(ctx) {
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(500 * time.Millisecond):
+					}
+				}
 				job, ok := w.queue.Dequeue(ctx)
 				if !ok {
 					return

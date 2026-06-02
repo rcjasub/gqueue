@@ -182,6 +182,19 @@ func (q *Queue) StartStalledDetector(ctx context.Context, threshold time.Duratio
 	}
 }
 
+func (q *Queue) Pause(ctx context.Context) error {
+	return q.client.Set(ctx, "queue:"+q.Name+":paused", "1", 0).Err()
+}
+
+func (q *Queue) Resume(ctx context.Context) error {
+	return q.client.Del(ctx, "queue:"+q.Name+":paused").Err()
+}
+
+func (q *Queue) IsPaused(ctx context.Context) bool {
+	exists, err := q.client.Exists(ctx, "queue:"+q.Name+":paused").Result()
+	return err == nil && exists > 0
+}
+
 // AddRepeatable registers a repeatable job in Redis, scored by its first next-run time.
 func (q *Queue) AddRepeatable(ctx context.Context, rj RepeatableJob) error {
 	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
@@ -266,3 +279,5 @@ func (q *Queue) RetryDead(ctx context.Context, id string) error {
 
 	return q.Enqueue(ctx, job)
 }
+
+    

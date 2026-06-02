@@ -57,6 +57,29 @@ result, err := client.Eval(ctx, luaScript, []string{key}, arg1, arg2).Int()
 
 In gqueue, the token bucket rate limiter uses a Lua script so two workers can't both read "1 token left" and both decrement it — that would allow two jobs through when only one should pass.
 
+## Pub/Sub (PUBLISH / SUBSCRIBE)
+Redis pub/sub lets you broadcast messages to any number of listeners instantly. A publisher sends a message to a named channel. Any subscriber on that channel receives it immediately.
+
+```
+PUBLISH job:completed "abc123"    // send a message
+SUBSCRIBE job:completed           // receive messages on this channel
+```
+
+Unlike lists (which store messages until consumed), pub/sub is fire-and-forget — if no one is subscribed when the message is published, it's gone. Use it for real-time notifications, not durable queuing.
+
+In gqueue, the worker publishes the job ID to `job:completed` or `job:failed` after processing. Subscribers can listen to these channels to react to job events in real time.
+
+## Flag Keys (EXISTS / SET / DEL)
+Sometimes you just need a boolean stored in Redis — something is either on or off. The pattern is to use key existence as the signal rather than the value.
+
+```
+SET queue:default:paused 1    // "on" — key exists
+DEL queue:default:paused      // "off" — key gone
+EXISTS queue:default:paused   // returns 1 if on, 0 if off
+```
+
+The value `"1"` is never read — only whether the key exists matters. gqueue uses this for pause/resume: the key existing means paused, the key missing means running.
+
 ## Expiry (TTL)
 You can set keys to auto-delete after a time with `EXPIRE`. gqueue doesn't use this directly, but it's useful for cleaning up stale data.
 

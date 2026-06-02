@@ -85,3 +85,59 @@ worker.OnFailed(func(j Job) {
 Multiple workers can run in parallel by setting `concurrency > 1`. Each worker runs in its own goroutine and pulls from the same queue. This lets you scale throughput without running multiple processes.
 
 The rate limiter is shared across all workers via Redis, so concurrency doesn't bypass the rate limit.
+
+## Pause / Resume
+Sometimes you need to stop a queue from picking up new jobs without killing the workers or losing any jobs. This is done with a flag key in Redis.
+
+**How it works:** `Pause` sets a key like `queue:default:paused` in Redis. `Resume` deletes it. Before every dequeue, the worker checks if that key exists — if it does, it sleeps and checks again. Jobs stay safely in the queue the whole time.
+
+The pause state lives in Redis (not in the Go process) so it works across multiple worker processes and can be triggered externally — from a CLI, a dashboard, or another service.
+
+```
+SET queue:default:paused 1    // pause
+DEL queue:default:paused      // resume
+EXISTS queue:default:paused   // 0 = running, 1 = paused
+```
+
+## Job Progress
+For long-running jobs, you want visibility into how far along they are — not just "active" or "done."
+
+**How it works:** The worker passes a `report` callback into the handler. The handler calls it at meaningful points during execution. The callback writes a `progress` field to the job's hash in Redis.
+
+```go
+worker.Register("resize-images", func(job Job, report func(pct int)) (string, error) {
+    for i, file := range files {
+        resizeFile(file)
+        report((i + 1) * 100 / len(files))  // e.g. 25%, 50%, 75%, 100%
+    }
+    return "resized all files", nil
+})
+```
+
+The handler decides what percentage means — the system just provides the tool. Jobs that don't need progress can ignore the `report` argument.
+
+## Job Results Storage
+After a job completes, the output of its handler is saved in Redis so it can be retrieved later. Without this, you'd only know a job finished — not what it produced.
+
+**How it works:** Handlers return `(string, error)` instead of just `error`. The result string is whatever the handler wants to report — a summary, a count, a status message. The worker saves it to the `job:<id>` hash under a `result` field alongside the existing status and timestamps.
+
+```go
+return "report generated: 1500 rows processed", nil
+```
+
+This means any job can be looked up after the fact and you can see exactly what it did.
+
+## Pub/Sub (Real-time Events)
+Polling Redis to check job status works, but it's wasteful — you keep asking "is it done yet?" instead of being told when it finishes.
+
+**Pub/Sub flips this around:** the worker publishes an event to a Redis channel the moment a job completes or fails. Any subscriber listening to that channel receives the message instantly.
+
+- Worker publishes `job.Id` to `job:completed` or `job:failed`
+- Subscribers receive the job ID and can look up full details from Redis
+
+```
+PUBLISH job:completed "abc123"   // worker fires this
+SUBSCRIBE job:completed          // listener receives it
+```
+
+This pattern is called **event-driven architecture** — components react to events rather than polling for state changes. It's how real-time dashboards, webhooks, and notifications are built.

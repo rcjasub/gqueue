@@ -137,3 +137,44 @@ if !ok {
     // handler not found
 }
 ```
+
+## Callbacks (Functions as Arguments)
+In Go, functions are values — you can pass them as arguments to other functions. A function passed in to be called later is called a **callback**.
+
+```go
+type ProcessFunc func(j Job, report func(pct int)) (string, error)
+```
+
+Here `report func(pct int)` is a callback. The worker builds it and passes it into the handler. The handler calls it whenever it wants to report progress — the handler doesn't need to know how it works internally.
+
+This is useful when the caller needs to inject behavior into a function without the function knowing the details. The handler just calls `report(50)` and the worker takes care of writing to Redis.
+
+## Closures
+A closure is a function that captures variables from the scope it was defined in. Those variables stay accessible even after the outer function has returned.
+
+```go
+report := func(pct int) {
+    w.queue.client.HSet(ctx, "job:"+job.Id, "progress", pct)
+}
+```
+
+`report` closes over `job.Id` and `ctx` — it remembers them without needing them passed as arguments. This is how the worker builds a `report` function that already knows which job to update.
+
+## Multiple Return Values
+Go functions can return more than one value. The convention is to return the result first and an error last.
+
+```go
+func(j Job, report func(pct int)) (string, error)
+```
+
+The caller handles both:
+
+```go
+result, err := handler(job, report)
+if err != nil {
+    // something went wrong
+}
+// use result
+```
+
+This is how job handlers return both their output and any error that occurred.

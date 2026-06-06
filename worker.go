@@ -94,6 +94,10 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 
 		if job.Attempts < job.MaxRetries {
 			job.Delay = time.Duration(math.Pow(2, float64(job.Attempts))) * time.Second
+			w.queue.client.HSet(ctx, "job:"+job.Id,
+				"status", StatusWaiting.String(),
+				"attempts", job.Attempts,
+			)
 			w.queue.Enqueue(ctx, job)
 
 		} else {

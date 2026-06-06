@@ -273,9 +273,10 @@ func (q *Queue) RetryDead(ctx context.Context, id string) error {
 	}
 
 	job := Job{
-		Id:      data["id"],
-		Status:  StatusWaiting,
-		Payload: data["payload"],
+		Id:       data["id"],
+		Name:     data["name"],
+		Status:   StatusWaiting,
+		Payload:  data["payload"],
 		Attempts: 0,
 	}
 

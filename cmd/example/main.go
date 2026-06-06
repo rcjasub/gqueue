@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rcjasub/gqueue"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -20,7 +21,8 @@ func main() {
 		cancel()
 	}()
 
-	queue := gqueue.NewQueue([]string{"main:high", "main:mid", "main:low"}, "default")
+	rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	queue := gqueue.NewQueue(rdb, []string{"main:high", "main:mid", "main:low"}, "default")
 	worker := gqueue.NewWorker(queue, 3, nil)
 
 	worker.Register("send-email", func(job gqueue.Job, report func(pct int)) (string, error) {

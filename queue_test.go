@@ -11,7 +11,7 @@ import (
 )
 
 func BenchmarkEnqueue(b *testing.B) {
-	q := NewQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"bench:high", "bench:mid", "bench:low"}, "bench")
 	ctx := context.Background()
 	job := NewJob("1", "bench-job", "payload")
 
@@ -22,7 +22,7 @@ func BenchmarkEnqueue(b *testing.B) {
 }
 
 func BenchmarkDequeue(b *testing.B) {
-	q := NewQueue([]string{"bench:high", "bench:mid", "bench:low"}, "bench")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"bench:high", "bench:mid", "bench:low"}, "bench")
 	ctx := context.Background()
 	job := NewJob("1", "bench-job", "payload")
 
@@ -36,7 +36,7 @@ func BenchmarkDequeue(b *testing.B) {
 }
 
 func TestEnqueue(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 	job := NewJob("1", "bench-job", "payload")
 
@@ -50,7 +50,7 @@ func TestEnqueue(t *testing.T) {
 }
 
 func TestDequeue(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 	job := NewJob("1", "bench-job", "payload")
 
@@ -65,7 +65,7 @@ func TestDequeue(t *testing.T) {
 }
 
 func TestRetry(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -90,7 +90,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestDeadLetter(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -117,7 +117,7 @@ func TestDeadLetter(t *testing.T) {
 }
 
 func TestOnCompleted(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -144,7 +144,7 @@ func TestOnCompleted(t *testing.T) {
 }
 
 func TestOnFailed(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -173,7 +173,7 @@ func TestOnFailed(t *testing.T) {
 }
 
 func TestPriority(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -201,7 +201,7 @@ func TestPriority(t *testing.T) {
 }
 
 func TestStalledJobDetection(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -226,7 +226,7 @@ func TestStalledJobDetection(t *testing.T) {
 }
 
 func TestNoHandler(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -249,7 +249,7 @@ func TestNoHandler(t *testing.T) {
 }
 
 func TestRepeatableJob(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
@@ -287,7 +287,7 @@ func TestRepeatableJob(t *testing.T) {
 }
 
 func TestRateLimit(t *testing.T) {
-	q := NewQueue([]string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
+	q := NewQueue(redis.NewClient(&redis.Options{Addr: "localhost:6379"}), []string{"\x01:high", "\x02:mid", "\x03:low"}, "\x01")
 	ctx := context.Background()
 
     q.client.Del(ctx, "ratelimit:"+q.Name);

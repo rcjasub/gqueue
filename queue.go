@@ -12,15 +12,12 @@ import (
 
 type Queue struct {
 	client *redis.Client
-	Names []string
-	Name string
+	Names  []string    // Redis list keys per priority, e.g. ["q:high", "q:mid", "q:low"]
+	Name   string      // queue identifier, used for pause key and rate limiter key
 }
 
-func NewQueue(name []string, n string) *Queue {
-	return &Queue{client: redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	}), Names: name,
-        Name: n}
+func NewQueue(client *redis.Client, name []string, n string) *Queue {
+	return &Queue{client: client, Names: name, Name: n}
 }
 
 // The ctx gets passed to Redis operations so that if the context is cancelled

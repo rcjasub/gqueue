@@ -136,7 +136,6 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 		}
 	}
 
-	printJob(job)
 }
 
 func (w *Worker) OnCompleted(fn Event) {

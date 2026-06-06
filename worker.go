@@ -12,6 +12,11 @@ import (
 type ProcessFunc func(j Job, report func(pct int)) (string, error)
 type Event func(job Job)
 
+type RateLimitConfig struct {
+	MaxTokens   int
+	RefillRate  float64
+}
+
 type Worker struct {
 	queue       *Queue
 	handlers    map[string]ProcessFunc
@@ -19,15 +24,17 @@ type Worker struct {
 	onCompleted Event
 	onFailed    Event
 	waitGroup   sync.WaitGroup
-	maxTokens   int
-	refillRate  float64
+	rateLimit   *RateLimitConfig
 }
 
-func NewWorker(queue *Queue, concurrency int) *Worker {
+
+
+func NewWorker(queue *Queue, concurrency int, rt *RateLimitConfig) *Worker {
 	return &Worker{
 		queue:       queue,
 		handlers:    make(map[string]ProcessFunc),
 		concurrency: concurrency,
+		rateLimit:   rt,		
 	}
 }
 
@@ -71,8 +78,8 @@ func (w *Worker) Start(ctx context.Context) {
 
 func (w *Worker) processJob(ctx context.Context, job Job) {
 
-	if w.maxTokens != 0 {
-		for !w.queue.Allow(ctx, w.maxTokens, w.refillRate) {
+	if w.rateLimit != nil {
+		for !w.queue.Allow(ctx, w.rateLimit.MaxTokens, w.rateLimit.RefillRate) {
 			time.Sleep(100 * time.Millisecond)  // pause before checking again
 		}
 	}

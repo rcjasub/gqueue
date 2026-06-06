@@ -21,7 +21,7 @@ func main() {
 	}()
 
 	queue := gqueue.NewQueue([]string{"main:high", "main:mid", "main:low"}, "default")
-	worker := gqueue.NewWorker(queue, 3)
+	worker := gqueue.NewWorker(queue, 3, nil)
 
 	worker.Register("send-email", func(job gqueue.Job, report func(pct int)) (string, error) {
 		report(50)

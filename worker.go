@@ -65,12 +65,12 @@ func (w *Worker) Start(ctx context.Context) {
 					"startedAt", job.StartedAt.Format(time.RFC3339),
 					"worker", fmt.Sprintf("worker-%d", i),
 				)
-				w.queue.client.ZAdd(ctx, "active-jobs", redis.Z{
+				w.queue.client.ZAdd(ctx, "active-jobs:"+w.queue.Name, redis.Z{
 					Score:  float64(job.StartedAt.Unix()),
 					Member: job.Id,
 				})
 				w.processJob(ctx, job)
-				w.queue.client.ZRem(ctx, "active-jobs", job.Id)
+				w.queue.client.ZRem(ctx, "active-jobs:"+w.queue.Name, job.Id)
 			}
 		}()
 	}
@@ -116,7 +116,7 @@ func (w *Worker) processJob(ctx context.Context, job Job) {
 				"failedAt", job.FailedAt.Format(time.RFC3339),
 				"error", job.Error,
 			)
-			w.queue.client.LPush(ctx, "dead-letter", job.Id)
+			w.queue.client.LPush(ctx, "dead-letter:"+w.queue.Name, job.Id)
 			w.queue.client.Publish(ctx, "job:failed", job.Id)
 			if w.onFailed != nil {
 				w.onFailed(job)

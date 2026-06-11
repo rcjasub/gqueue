@@ -69,7 +69,7 @@ func TestRetry(t *testing.T) {
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
-	q.client.Del(ctx, "delayed")
+	q.client.Del(ctx, "delayed:"+q.Name)
 
 	job := NewJob("retry-1", "send-email", "bad@example.com")
 	job.MaxRetries = 3
@@ -83,7 +83,7 @@ func TestRetry(t *testing.T) {
 	dequeued, _ := q.Dequeue(ctx)
 	worker.processJob(ctx, dequeued)
 
-	delayed := q.client.ZCard(ctx, "delayed").Val()
+	delayed := q.client.ZCard(ctx, "delayed:"+q.Name).Val()
 	if delayed != 1 {
 		t.Errorf("expected job to be re-queued in delayed set, got %d", delayed)
 	}
@@ -94,8 +94,8 @@ func TestDeadLetter(t *testing.T) {
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
-	q.client.Del(ctx, "delayed")
-	q.client.Del(ctx, "dead-letter")
+	q.client.Del(ctx, "delayed:"+q.Name)
+	q.client.Del(ctx, "dead-letter:"+q.Name)
 
 	job := NewJob("retry-1", "send-email", "bad@example.com")
 	job.MaxRetries = 3
@@ -110,7 +110,7 @@ func TestDeadLetter(t *testing.T) {
 	dequeued, _ := q.Dequeue(ctx)
 	worker.processJob(ctx, dequeued)
 
-	count := q.client.LLen(ctx, "dead-letter").Val()
+	count := q.client.LLen(ctx, "dead-letter:"+q.Name).Val()
 	if count != 1 {
 		t.Errorf("expected job in dead-letter, got %d", count)
 	}
@@ -148,7 +148,7 @@ func TestOnFailed(t *testing.T) {
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
-	q.client.Del(ctx, "dead-letter")
+	q.client.Del(ctx, "dead-letter:"+q.Name)
 
 	job := NewJob("failed-1", "send-email", "bad@example.com")
 	job.Attempts = job.MaxRetries - 1
@@ -205,14 +205,14 @@ func TestStalledJobDetection(t *testing.T) {
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
-	q.client.Del(ctx, "active-jobs")
+	q.client.Del(ctx, "active-jobs:"+q.Name)
 
 	job := NewJob("stall-1", "send-email", "payload")
 	q.Enqueue(ctx, job)
 
 	// Simulate worker picking up the job but crashing before finishing
 	dequeued, _ := q.Dequeue(ctx)
-	q.client.ZAdd(ctx, "active-jobs", redis.Z{
+	q.client.ZAdd(ctx, "active-jobs:"+q.Name, redis.Z{
 		Score:  float64(time.Now().Add(-2 * time.Minute).Unix()),
 		Member: dequeued.Id,
 	})
@@ -230,8 +230,8 @@ func TestNoHandler(t *testing.T) {
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
-	q.client.Del(ctx, "delayed")
-	q.client.Del(ctx, "dead-letter")
+	q.client.Del(ctx, "delayed:"+q.Name)
+	q.client.Del(ctx, "dead-letter:"+q.Name)
 
 	job := NewJob("nohandler-1", "unknown-job-type", "payload")
 	job.Attempts = job.MaxRetries - 1
@@ -242,7 +242,7 @@ func TestNoHandler(t *testing.T) {
 	dequeued, _ := q.Dequeue(ctx)
 	worker.processJob(ctx, dequeued)
 
-	count := q.client.LLen(ctx, "dead-letter").Val()
+	count := q.client.LLen(ctx, "dead-letter:"+q.Name).Val()
 	if count != 1 {
 		t.Errorf("expected unhandled job in dead-letter, got %d", count)
 	}
@@ -253,7 +253,7 @@ func TestRepeatableJob(t *testing.T) {
 	ctx := context.Background()
 
 	q.client.Del(ctx, q.Names...)
-	q.client.Del(ctx, "repeatable")
+	q.client.Del(ctx, "repeatable:"+q.Name)
 
 	rj := RepeatableJob{
 		Name:     "test-heartbeat",
@@ -265,7 +265,7 @@ func TestRepeatableJob(t *testing.T) {
 
 	// Seed with a past timestamp so the scheduler sees it as due immediately.
 	data, _ := json.Marshal(rj)
-	q.client.ZAdd(ctx, "repeatable", redis.Z{
+	q.client.ZAdd(ctx, "repeatable:"+q.Name, redis.Z{
 		Score:  float64(time.Now().Add(-5 * time.Second).Unix()),
 		Member: string(data),
 	})
@@ -280,7 +280,7 @@ func TestRepeatableJob(t *testing.T) {
 	}
 
 	// The repeatable definition should have been re-scheduled (still 1 entry in the set).
-	remaining := q.client.ZCard(ctx, "repeatable").Val()
+	remaining := q.client.ZCard(ctx, "repeatable:"+q.Name).Val()
 	if remaining != 1 {
 		t.Errorf("expected repeatable job to be re-scheduled, got %d entries in set", remaining)
 	}

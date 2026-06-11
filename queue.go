@@ -40,7 +40,7 @@ func (q *Queue) Enqueue(ctx context.Context, job Job) error {
 	)
 
 	if job.Delay > 0 {
-		return q.client.ZAdd(ctx, "delayed", redis.Z{
+		return q.client.ZAdd(ctx, "delayed:"+q.Name, redis.Z{
 			Score:  float64(time.Now().Add(job.Delay).Unix()),
 			Member: jobJSON,
 		}).Err()
@@ -60,7 +60,7 @@ func (q *Queue) StartScheduler(ctx context.Context) {
 		case <-ticker.C:
 			now := fmt.Sprintf("%d", time.Now().Unix())
 			jobs, err := q.client.ZRangeArgs(ctx, redis.ZRangeArgs{
-				Key:     "delayed",
+				Key:     "delayed:" + q.Name,
 				Start:   "0",
 				Stop:    now,
 				ByScore: true,
@@ -72,7 +72,7 @@ func (q *Queue) StartScheduler(ctx context.Context) {
 				var job Job
 				json.Unmarshal([]byte(jobJSON), &job)
 				q.client.LPush(ctx, q.Names[job.Priority], jobJSON)
-				q.client.ZRem(ctx, "delayed", jobJSON)
+				q.client.ZRem(ctx, "delayed:"+q.Name, jobJSON)
 			}
 		}
 	}
@@ -106,7 +106,7 @@ func (q *Queue) Dequeue(ctx context.Context) (Job, bool) {
 }
 
 func (q *Queue) ListDead(ctx context.Context) ([]Job, error) {
-	ids, err := q.client.LRange(ctx, "dead-letter", 0, -1).Result()
+	ids, err := q.client.LRange(ctx, "dead-letter:"+q.Name, 0, -1).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (q *Queue) ListDead(ctx context.Context) ([]Job, error) {
 func (q *Queue) DetectStalled(ctx context.Context, threshold time.Duration) {
 	cutoff := strconv.FormatFloat(float64(time.Now().Add(-threshold).Unix()), 'f', 0, 64)
 	ids, err := q.client.ZRangeArgs(ctx, redis.ZRangeArgs{
-		Key:     "active-jobs",
+		Key:     "active-jobs:" + q.Name,
 		Start:   "0",
 		Stop:    cutoff,
 		ByScore: true,
@@ -142,7 +142,7 @@ func (q *Queue) DetectStalled(ctx context.Context, threshold time.Duration) {
 	for _, id := range ids {
 		data, err := q.client.HGetAll(ctx, "job:"+id).Result()
 		if err != nil || len(data) == 0 {
-			q.client.ZRem(ctx, "active-jobs", id)
+			q.client.ZRem(ctx, "active-jobs:"+q.Name, id)
 			continue
 		}
 		job := Job{
@@ -161,7 +161,7 @@ func (q *Queue) DetectStalled(ctx context.Context, threshold time.Duration) {
 		if a, err := strconv.Atoi(data["attempts"]); err == nil {
 			job.Attempts = a
 		}
-		q.client.ZRem(ctx, "active-jobs", id)
+		q.client.ZRem(ctx, "active-jobs:"+q.Name, id)
 		q.Enqueue(ctx, job)
 	}
 }
@@ -208,7 +208,7 @@ func (q *Queue) AddRepeatable(ctx context.Context, rj RepeatableJob) error {
 	if err != nil {
 		return err
 	}
-	return q.client.ZAdd(ctx, "repeatable", redis.Z{
+	return q.client.ZAdd(ctx, "repeatable:"+q.Name, redis.Z{
 		Score:  float64(next.Unix()),
 		Member: string(data),
 	}).Err()
@@ -218,7 +218,7 @@ func (q *Queue) AddRepeatable(ctx context.Context, rj RepeatableJob) error {
 func (q *Queue) tickRepeatable(ctx context.Context, parser cron.Parser) {
 	now := fmt.Sprintf("%d", time.Now().Unix())
 	members, err := q.client.ZRangeArgs(ctx, redis.ZRangeArgs{
-		Key:     "repeatable",
+		Key:     "repeatable:"+q.Name,
 		Start:   "0",
 		Stop:    now,
 		ByScore: true,
@@ -229,20 +229,20 @@ func (q *Queue) tickRepeatable(ctx context.Context, parser cron.Parser) {
 	for _, member := range members {
 		var rj RepeatableJob
 		if err := json.Unmarshal([]byte(member), &rj); err != nil {
-			q.client.ZRem(ctx, "repeatable", member)
+			q.client.ZRem(ctx, "repeatable:"+q.Name, member)
 			continue
 		}
 		job := NewJob(fmt.Sprintf("%s-%d", rj.Name, time.Now().UnixNano()), rj.JobName, rj.Payload)
 		job.Priority = rj.Priority
 		q.Enqueue(ctx, job)
 
-		q.client.ZRem(ctx, "repeatable", member)
+		q.client.ZRem(ctx, "repeatable:"+q.Name, member)
 		schedule, err := parser.Parse(rj.Cron)
 		if err != nil {
 			continue
 		}
 		next := schedule.Next(time.Now())
-		q.client.ZAdd(ctx, "repeatable", redis.Z{
+		q.client.ZAdd(ctx, "repeatable:"+q.Name, redis.Z{
 			Score:  float64(next.Unix()),
 			Member: member,
 		})
@@ -277,7 +277,7 @@ func (q *Queue) RetryDead(ctx context.Context, id string) error {
 		Attempts: 0,
 	}
 
-	q.client.LRem(ctx, "dead-letter", 1, id)
+	q.client.LRem(ctx, "dead-letter:"+q.Name, 1, id)
 
 	return q.Enqueue(ctx, job)
 }

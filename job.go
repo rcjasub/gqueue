@@ -72,6 +72,21 @@ func (s JobStatus) String() string {
 	}
 }
 
+func ParseStatus(s string) JobStatus {
+	switch s {
+	case "active":
+		return StatusActive
+	case "completed":
+		return StatusCompleted
+	case "failed":
+		return StatusFailed
+	case "dead-letter":
+		return StatusDeadLetter
+	default:
+		return StatusWaiting
+	}
+}
+
 // RepeatableJob defines a job that runs on a cron schedule.
 // Cron supports standard 6-field expressions (sec min hour dom mon dow)
 // and descriptors like @every 5s, @hourly, @daily.

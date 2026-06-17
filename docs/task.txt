@@ -20,6 +20,6 @@
   [DONE]Library refactor — move from package main to package gqueue (do this last)
 
   [DONE] Global Redis key collision — hardcoded keys like "dead-letter" and "active-jobs" are shared across queues; two queues in the same Redis instance would collide
-  [ ] Job status by ID — no public API to fetch a job's current status/result from outside the package
+  [DONE] Job status by ID — no public API to fetch a job's current status/result from outside the package
   [DONE] Test Redis client — each test creates its own redis.Client; a shared client would be cleaner
 

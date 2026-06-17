@@ -263,6 +263,36 @@ func (q *Queue) StartRepeatableScheduler(ctx context.Context) {
 	}
 }
 
+// GetJob fetches a job's current status and details from Redis by its ID.
+func (q *Queue) GetJob(ctx context.Context, id string) (Job, error) {
+	data, err := q.client.HGetAll(ctx, "job:"+id).Result()
+	if err != nil || len(data) == 0 {
+		return Job{}, fmt.Errorf("job not found: %s", id)
+	}
+
+	job := Job{
+		Id:      data["id"],
+		Name:    data["name"],
+		Payload: data["payload"],
+		Error:   data["error"],
+	}
+
+	if s, ok := data["status"]; ok {
+		job.Status = ParseStatus(s)
+	}
+	if p, err := strconv.Atoi(data["priority"]); err == nil {
+		job.Priority = JobPriority(p)
+	}
+	if a, err := strconv.Atoi(data["attempts"]); err == nil {
+		job.Attempts = a
+	}
+	if r, err := strconv.Atoi(data["maxRetries"]); err == nil {
+		job.MaxRetries = r
+	}
+
+	return job, nil
+}
+
 func (q *Queue) RetryDead(ctx context.Context, id string) error {
 	data, err := q.client.HGetAll(ctx, "job:"+id).Result()
 	if err != nil || len(data) == 0 {
